@@ -1,0 +1,246 @@
+#!/bin/bash
+
+# Using MBR instead of GPT because with GPT some laptops do not show
+# the USB drive as a legacy option in the boot menu
+
+# Using Syslinux as main bootloader because GRUB does not chainload
+# to logical partitions
+
+# Bash unofficial strict mode
+
+# Give an error if a variable is undefined (use ${var+x} for checking)
+set -u
+# Set the return code of the first command to fail in a pipeline
+set -o pipefail
+# Do not set "-e" since there are some cases in this script where commands
+# return a non-success code but are still usefull
+
+# This file is created in each partition to be checked in future runs
+# and determine if the partition needs updating
+VERSION_FILE=multi-boot-stick
+
+# Use ionice when doing massive files copy to not hang the machine
+IONICE="ionice -c3"
+
+BOOT_SIZE_MiB=50
+
+DATA_DIR=data
+TARGETS_DIR=targets
+
+BOOT_MOUNT_DIR=/mnt/boot
+PART_MOUNT_DIR=/mnt/usbstick
+ISO_MOUNT_DIR=/mnt/iso
+
+BOOT_CONFIG=${BOOT_MOUNT_DIR}/syslinux/syslinux.cfg
+
+if [[ $EUID -ne 0 ]]; then
+        echo "This script must be run as root"
+        exit
+fi
+
+mkdir -p ${DATA_DIR}
+mkdir -p $BOOT_MOUNT_DIR
+mkdir -p $PART_MOUNT_DIR
+mkdir -p $ISO_MOUNT_DIR
+
+source aux-funcs.sh
+
+function check_good_block_device() {
+	if [[ ! "$DEV" =~ ^/dev/sd.$ ]]; then
+		error "Must give a device like /dev/sdx as an argument."
+	fi
+
+	local removable disk=${DEV#/dev/}
+	read removable < /sys/block/$disk/removable
+
+	if [[ "$removable" != "1" ]]; then
+		error "$DEV must be a removable device."
+	fi
+
+	if [[ "$DEV" == /dev/sda ]]; then
+		error "I will not accept $DEV because it will almost certainly be a mistake..."
+	fi
+
+	if [ ! -b "$DEV" ]; then
+		error "$DEV is not a block device."
+	fi
+}
+
+function boot_partition_hash() {
+	md5sum $0 | awk '{print $1}'
+}
+
+function create_boot_partition() {
+	msg "Creating new boot partition..."
+	do_parted "mklabel msdos"
+	create_partition_MiB $PART_NAME $BOOT_SIZE_MiB
+	do_parted "set 1 boot on"
+}
+
+function setup_boot() {
+
+	PART_NUM=1
+	PART_NAME=BOOT
+
+	umount $BOOT_PART 2>/dev/null
+	umount $BOOT_MOUNT_DIR 2>/dev/null
+
+	check_previous_install "$PARTITION" "$BOOT_MOUNT_DIR"
+
+	LAST_VERSION=$(boot_partition_hash)
+
+	if [[ "$LAST_VERSION" == "$INSTALLED_VERSION" ]]; then
+		msg "Boot partition up to date on USB stick, skiping installation..."
+		mount $BOOT_PART $BOOT_MOUNT_DIR
+		return
+	fi
+
+	msg "Updating USB stick boot partition..."
+
+	if [[ "$INSTALLED_VERSION" == "0" ]]; then
+		create_boot_partition
+	else
+		local current_size=$(get_partition_size_MiB $PART_NUM)
+
+		msg "Partition already exists ($current_size MiB)..."
+
+		if (( current_size < BOOT_SIZE_MiB )); then
+			msg "Partition is smaller than defined ($BOOT_SIZE_MiB MiB)..."
+			create_boot_partition
+		fi
+	fi
+
+	msg "Formatting boot partition ($BOOT_PART)..."
+	format $BOOT_PART "$PART_NAME"
+
+	msg "Installing bootloader on MBR..."
+
+	if [ ! -f /usr/share/syslinux/mbr.bin ]; then
+		error "Could not find /usr/share/syslinux/mbr.bin"
+	fi
+
+	dd bs=440 conv=notrunc count=1 \
+		if=/usr/share/syslinux/mbr.bin \
+		of=$DEV 2>&1 | quote_output
+
+	syslinux --install $BOOT_PART
+
+	msg "Copying files..."
+
+	mount $BOOT_PART $BOOT_MOUNT_DIR
+
+	mkdir -p ${BOOT_MOUNT_DIR}/syslinux
+	cp /usr/share/syslinux/{*.c32,memdisk} ${BOOT_MOUNT_DIR}/syslinux
+
+	boot_partition_hash > ${BOOT_MOUNT_DIR}/${VERSION_FILE}
+}
+
+function start_bootloader_config() {
+	cat <<EOF > $BOOT_CONFIG
+TIMEOUT 0
+
+UI menu.c32
+MENU TITLE Multi Boot Stick
+EOF
+}
+
+function end_bootloader_config() {
+	cat <<EOF >> $BOOT_CONFIG
+
+LABEL Boot first disk
+	COM32 chain.c32
+	APPEND hd1
+EOF
+}
+
+function cleanup() {
+	msg "Cleaning up..."
+
+	umount ${BOOT_MOUNT_DIR} 2>/dev/null
+
+	while umount ${PART_MOUNT_DIR} 2>/dev/null; do
+		warning "Umounting $PART_MOUNT_DIR"
+	done
+
+	while umount ${ISO_MOUNT_DIR} 2>/dev/null; do
+		warning "Umounting $ISO_MOUNT_DIR"
+
+	done
+}
+
+if [[ ! "${1+x}" ]]; then
+	echo "Usage: $0 /dev/sdX [target1.sh] [target2.sh] ..."
+	echo "If called without any script it will use ${TARGETS_DIR}/*.sh"
+	exit
+fi
+
+# Entry point / Setup boot partition and bootloader
+if [[ "$1" =~ /dev  ]]; then
+
+	trap cleanup EXIT
+
+	DEV="$1"
+	shift
+
+	if [[ "$@" ]]; then
+		ENTRIES="$*"
+	else
+		ENTRIES=${TARGETS_DIR}/*.sh
+	fi
+
+	BOOT_PART=${DEV}1
+	PARTITION=$BOOT_PART
+	export BOOT_PART # May be needed in the recursive calls
+
+	check_good_block_device
+
+	setup_boot
+
+	start_bootloader_config
+
+	PART_NUM=2
+	for entry in $ENTRIES; do
+		msg "Processing $entry"
+		$0 "$entry" "$DEV" "$PART_NUM"
+
+		# Do not increment on targets that do not create partitions
+		[[ $? != 0 ]] && continue
+
+		if (( PART_NUM == 3 )); then
+			PART_NUM=$((PART_NUM+2)) # To skip the MBR extended partition
+		else
+			PART_NUM=$((PART_NUM+1))
+		fi
+	done
+
+	end_bootloader_config
+
+	umount ${BOOT_MOUNT_DIR}
+
+	msg "Done :D"
+
+# Called by itself / Setup each menu entry
+else
+	SH_FILE="$1"
+	source $SH_FILE
+
+	if [[ "${PART_NAME+x}" ]]; then
+
+		DEV="$2"
+		PART_NUM="$3"
+		PARTITION=${DEV}${PART_NUM}
+
+		PART_NAME=${PART_NAME^^} # Uppercase it
+
+		check_good_block_device
+
+		msg "Installing '$NAME' ($PART_NAME) on ${PARTITION}..."
+		run
+		exit 0
+	else
+		msg "Adding entry '$NAME'..."
+		run
+		exit 1
+	fi
+
+fi
