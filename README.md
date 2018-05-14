@@ -50,35 +50,44 @@ of the pre-defined functions.
 
 ### Required variables
 
-`NAME`
+| Variable        | Description                                                |
+| ---             | ---                                                        |
+| `NAME`          | he name used on the boot menu and script output log        |
 
 ### Optional variables
 
-`PART_NAME`
-`DOWNLOAD_URL`
-`ISO_FILE`
-`SYSLINUX_DIR`
-`SYSLINUX_BIN`
+| Variable        | Description                                                |
+| ---             | ---                                                        |
+| `PART_NAME`     | If defined a partition with this name will be created      |
+| `DOWNLOAD_URL`  | URL to update an ISO file                                  |
+| `ISO_FILE`      | Local ISO file to use instead of download                  |
+| `SYSLINUX_DIR`  | Override the default `syslinux` top-level directory        |
+| `SYSLINUX_BIN`  | Override the system syslinux binary                        |
 
 ### Functions that may be overridden
 
-`run`
-`customize`
-`update_iso`
-
+| Function     | Default behaviour                                              |
+| ---          | ---                                                            |
+| `run`        | Auto-detect and install an ISOLINUX or Windows ISO             |
+| `customize`  | Nothing                                                        |
+| `update_iso` | Updates ISO from URL in `DOWNLOAD_URL`                         |
 
 ### Available functions for use
 
-`update_file_always`
-`download_file`
-`check_previous_install`
-`remove_partitions_since`
-`create_partition_MiB`
-`format`
+| Function                  | Arguments                  | Description                                                     |
+| ---                       | ---                        |                                                                 |
+| `update_file_always`      | URL, File name             | Always download the URL given                                   |
+| `download_file``          | URL, File name             | Download file if not yet present                                |
+| `check_previous_install`  | Partition, Mount directory | Set `INSTALLED_VERSION` to the version present on the partition |
+| `remove_partitions_since` | Partition number           | Removes all partitions equal or above the number given          | 
+| `create_partition_MiB`    | Name, Size                 | Creates a new partition with the given name and size            |
+| `format`                  | Device, Name               | Format the device/partition with vfat                           |
 
 ### Accessory functions for use
 
-`quote_output`
-`msg`
-`error`
-`warning`
+| Function       | Description                                                           |
+| ---            | ---                                                                   |
+| `quote_output` | Pipe output to this to show in the terminal with a differente color   | 
+| `msg`          | Print text for normal running output with nice formatting and colors  |
+| `error`        | Print text for an error condidtion and exits the script               |
+| `warning`      | Print noticiable text for non-fatal conditions                        |
