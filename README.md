@@ -75,7 +75,7 @@ of the pre-defined functions.
 ### Available functions for use
 
 | Function                  | Arguments                  | Description                                                     |
-| ---                       | ---                        |                                                                 |
+| ---                       | ---                        | ---                                                             |
 | `update_file_always`      | URL, File name             | Always download the URL given                                   |
 | `download_file``          | URL, File name             | Download file if not yet present                                |
 | `check_previous_install`  | Partition, Mount directory | Set `INSTALLED_VERSION` to the version present on the partition |
