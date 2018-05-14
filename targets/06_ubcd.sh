@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Ultimate Boot CD"
 
 PART_NAME="ubcd"

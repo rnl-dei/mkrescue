@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Data partition"
 PART_NAME="data"
 

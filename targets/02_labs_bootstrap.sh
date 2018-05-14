@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Labs bootstrap"
 
 SERVER_URL="https://geminio.rnl.tecnico.ulisboa.pt/"

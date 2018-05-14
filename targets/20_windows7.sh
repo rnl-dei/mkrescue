@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Windows 7 Enterprise N SP1 x86 DVD"
 
 PART_NAME="windows7"

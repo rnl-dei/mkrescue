@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="GRUB 2"
 #PART_NAME=""
 

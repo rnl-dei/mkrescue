@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Gentoo Minimal Live CD"
 
 PART_NAME="gentoo"

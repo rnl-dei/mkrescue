@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="Arch Live CD"
 
 PART_NAME="arch"

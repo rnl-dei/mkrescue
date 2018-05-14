@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NAME="System Rescue CD"
 
 PART_NAME="sysrescd"
