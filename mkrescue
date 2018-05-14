@@ -219,7 +219,7 @@ if [[ "$1" =~ /dev  ]]; then
 	msg "Done :D"
 
 # Called by itself / Setup each menu entry
-else
+elif [[ "$1" =~ .sh$  ]]; then
 	SH_FILE="$1"
 	source $SH_FILE
 
@@ -242,4 +242,6 @@ else
 		exit 1
 	fi
 
+else
+	usage_exit
 fi

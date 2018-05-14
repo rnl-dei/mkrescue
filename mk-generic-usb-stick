@@ -9,4 +9,4 @@ TARGETS=(
 	90_data.sh
 )
 
-echo ./mkrescue ${TARGETS[@]/#/targets/}
+echo ./mkrescue $1 ${TARGETS[@]/#/targets/}
