@@ -1,0 +1,12 @@
+#!/bin/bash
+
+TARGETS=(
+	05_sysrescd.sh
+	06_ubcd.sh
+	10_gentoo.sh
+	11_arch.sh
+	30_grub2.sh
+	90_data.sh
+)
+
+echo ./mkrescue ${TARGETS[@]/#/targets/}

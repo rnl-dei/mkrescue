@@ -168,11 +168,12 @@ function cleanup() {
 	done
 }
 
-if [[ ! "${1+x}" ]]; then
-	echo "Usage: $0 /dev/sdX [target1.sh] [target2.sh] ..."
-	echo "If called without any script it will use ${TARGETS_DIR}/*.sh"
+function usage_exit() {
+	echo "Usage: $0 /dev/sdX target1.sh target2.sh ..."
 	exit
-fi
+}
+
+[[ ! "${1+x}" ]] && usage_exit
 
 # Entry point / Setup boot partition and bootloader
 if [[ "$1" =~ /dev  ]]; then
@@ -182,11 +183,9 @@ if [[ "$1" =~ /dev  ]]; then
 	DEV="$1"
 	shift
 
-	if [[ "$@" ]]; then
-		ENTRIES="$*"
-	else
-		ENTRIES=${TARGETS_DIR}/*.sh
-	fi
+	[[ ! "$*" ]] && usage_exit
+
+	ENTRIES="$*"
 
 	BOOT_PART=${DEV}1
 	PARTITION=$BOOT_PART
