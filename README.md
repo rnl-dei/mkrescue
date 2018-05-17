@@ -20,6 +20,8 @@ To create a RNL-specific USB stick with also a Labs bootstrap entry and Windows 
 ```sh
 $ ./mk-rnl-usb-stick /dev/sdX
 ```
+Warning: The Windows ISO is not distributed here or automatically downloaded,
+you must do it manually by your available legal channel.
 
 To create other combinations just run `mkrescue` with the desired scripts, for example:
 ```sh
@@ -77,7 +79,7 @@ of the pre-defined functions.
 | Function                  | Arguments                  | Description                                                     |
 | ---                       | ---                        | ---                                                             |
 | `update_file_always`      | URL, File name             | Always download the URL given                                   |
-| `download_file``          | URL, File name             | Download file if not yet present                                |
+| `download_file`           | URL, File name             | Download file if not yet present                                |
 | `check_previous_install`  | Partition, Mount directory | Set `INSTALLED_VERSION` to the version present on the partition |
 | `remove_partitions_since` | Partition number           | Removes all partitions equal or above the number given          |
 | `create_partition_MiB`    | Name, Size                 | Creates a new partition with the given name and size            |
