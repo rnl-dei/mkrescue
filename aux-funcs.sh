@@ -113,7 +113,7 @@ function check_previous_install() {
 
 	umount $partition 2>/dev/null
 
-	if mount $partition $mount_dir; then
+	if mount $partition $mount_dir 2>/dev/null; then
 
 		if [ -f ${mount_dir}/${VERSION_FILE} ]; then
 			read INSTALLED_VERSION < ${mount_dir}/${VERSION_FILE}
@@ -142,38 +142,53 @@ function do_parted() {
 	parted -s $DEV "$1"
 }
 
+function partition_end() {
+	local start=$1
+	local size=$2
+
+	if [[ "$size" == -1 ]]; then
+		echo "-1"
+	else
+		echo "$(( start + size ))MiB"
+	fi
+}
+
 function create_partition_MiB() {
 	local name=$1
 	local size=$2
 
-	local start_mib=$(do_parted "unit MiB print" |
-	              awk '$1 ~ /[[:digit:]]/{gsub("(MiB|,00)",""); end = $3} END{print end}')
-	[[ ! "$start_mib" ]] && start_mib=1
+	local start=$(get_last_partition_end_MiB)
+	[[ ! "$start" || "$start" == 0 ]] && start=1
 
-	# Parted only accept logical partitions if starting 1MiB after the previous one end
-	local start="$(( start_mib + 1 ))MiB"
-
-	if [[ "$size" == -1 ]]; then
-		local end="-1"
-	else
-		local end="$(( start + size ))MiB"
-	fi
-
-	# TODO: Get the partition number automatically?
-	# TODO: Or verify that we are creating the next unused?
 	if (( PART_NUM < 4 )); then
-		do_parted "mkpart primary ${start} ${end}"
+
+		do_parted "mkpart primary ${start}MiB $(partition_end $start $size)"
 	else
 		if (( PART_NUM == 5 )); then
-			do_parted "mkpart extended ${start} -1"
+			do_parted "mkpart extended ${start}MiB -1"
 		fi
-		do_parted "mkpart logical ${start} ${end}"
+
+		# Parted only accepts logical partitions if starting 1MiB after the previous one ends
+		start=$(( start + 1 ))
+		do_parted "mkpart logical ${start}MiB $(partition_end $start $size)"
+	fi
+
+	local count_partitions=$(get_partitions_count)
+
+	if (( count_partitions != PART_NUM )); then
+		error "Something is wrong, partition table does not match the requested partition."
 	fi
 }
 
 function get_partition_size_MiB() {
 	local num=$1
+	# Use kib because mib shows decimal places for small numbers
 	do_parted "unit kib print" | awk '$1 == '$num'{sub("kiB","");print $4/1024}'
+}
+
+function get_last_partition_end_MiB() {
+	do_parted "unit kib print" \
+		| awk '$1 ~ /[[:digit:]]/{gsub("kiB",""); end = $3} END{print end/1024}'
 }
 
 function get_partitions_count() {

@@ -206,7 +206,7 @@ if [[ "$1" =~ /dev  ]]; then
 		[[ $? != 0 ]] && continue
 
 		if (( PART_NUM == 3 )); then
-			PART_NUM=$((PART_NUM+2)) # To skip the MBR extended partition
+			PART_NUM=$((PART_NUM+2)) # Skip the MBR extended partition
 		else
 			PART_NUM=$((PART_NUM+1))
 		fi
@@ -223,15 +223,15 @@ elif [[ "$1" =~ .sh$  ]]; then
 	SH_FILE="$1"
 	source $SH_FILE
 
+	DEV="$2"
+	PART_NUM="$3"
+	check_good_block_device
+
 	if [[ "${PART_NAME+x}" ]]; then
 
-		DEV="$2"
-		PART_NUM="$3"
 		PARTITION=${DEV}${PART_NUM}
 
 		PART_NAME=${PART_NAME^^} # Uppercase it
-
-		check_good_block_device
 
 		msg "Installing '$NAME' ($PART_NAME) on ${PARTITION}..."
 		run

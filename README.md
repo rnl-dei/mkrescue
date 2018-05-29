@@ -13,12 +13,12 @@ the USB device as argument.
 To create a generic USB stick with rescue and Linux systems:
 
 ```sh
-$ ./mk-generic-usb-stick /dev/sdX
+$ ./create-generic-usb-stick /dev/sdX
 ```
 
 To create a RNL-specific USB stick with also a Labs bootstrap entry and Windows install ISO:
 ```sh
-$ ./mk-rnl-usb-stick /dev/sdX
+$ ./create-rnl-usb-stick /dev/sdX
 ```
 Warning: The Windows ISO is not distributed here or automatically downloaded,
 you must do it manually by your available legal channel.
