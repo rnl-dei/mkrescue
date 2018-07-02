@@ -137,7 +137,7 @@ function setup_boot() {
 
 function start_bootloader_config() {
 	cat <<EOF > $BOOT_CONFIG
-TIMEOUT 5
+TIMEOUT 50
 
 UI menu.c32
 MENU TITLE Multi Boot Stick
