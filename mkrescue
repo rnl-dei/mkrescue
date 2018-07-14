@@ -81,6 +81,7 @@ function setup_boot() {
 
 	PART_NUM=1
 	PART_NAME=BOOT
+	NAME=syslinux
 
 	umount $BOOT_PART 2>/dev/null
 	umount $BOOT_MOUNT_DIR 2>/dev/null
