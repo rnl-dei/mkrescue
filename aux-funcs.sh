@@ -252,7 +252,7 @@ function install_iso() {
 
 		if is_isolinux; then
 			local sysdir=${SYSLINUX_DIR:-syslinux}
-			local sysbin=${SYSLINUX_BIN:-syslinux}
+			local sysbin=${SYSLINUX_BIN:-$DEFAULT_SYSLINUX_BIN}
 
 			msg "Installing syslinux on VBR ($sysbin, $PARTITION, $sysdir)..."
 			$sysbin --install --directory $sysdir $PARTITION

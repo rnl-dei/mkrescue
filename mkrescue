@@ -19,6 +19,9 @@ set -o pipefail
 # and determine if the partition needs updating
 VERSION_FILE=multi-boot-stick
 
+SYSLINUX_URL="https://www.kernel.org/pub/linux/utils/boot/syslinux/syslinux-6.03.tar.gz"
+DEFAULT_SYSLINUX_BIN=syslinux/bios/linux/syslinux
+
 # Use ionice when doing massive files copy to not hang the machine
 IONICE="ionice -c3"
 
@@ -44,6 +47,18 @@ mkdir -p $PART_MOUNT_DIR
 mkdir -p $ISO_MOUNT_DIR
 
 source aux-funcs.sh
+
+function check_syslinux() {
+	if [[ ! -f "$DEFAULT_SYSLINUX_BIN" ]]; then
+		local file=syslinux.tar.gz
+		msg "Downloading syslinux..."
+		download_file "$SYSLINUX_URL" "$file"
+		msg "Extracting syslinux..."
+		mkdir -p syslinux
+		tar xf "$file" -C syslinux --strip-components 1
+		rm "$file"
+	fi
+}
 
 function check_good_block_device() {
 	if [[ ! "$DEV" =~ ^/dev/sd.$ ]]; then
@@ -116,22 +131,24 @@ function setup_boot() {
 
 	msg "Installing bootloader on MBR..."
 
-	if [ ! -f /usr/share/syslinux/mbr.bin ]; then
-		error "Could not find /usr/share/syslinux/mbr.bin"
+	local mbr=syslinux/bios/mbr/mbr.bin
+
+	if [ ! -f "$mbr" ]; then
+		error "Could not find '$mbr'"
 	fi
 
-	dd bs=440 conv=notrunc count=1 \
-		if=/usr/share/syslinux/mbr.bin \
-		of=$DEV 2>&1 | quote_output
+	dd bs=440 conv=notrunc count=1 if="$mbr" of=$DEV 2>&1 | quote_output
 
-	syslinux --install $BOOT_PART
+	"$DEFAULT_SYSLINUX_BIN" --install $BOOT_PART
 
 	msg "Copying files..."
 
 	mount $BOOT_PART $BOOT_MOUNT_DIR
 
 	mkdir -p ${BOOT_MOUNT_DIR}/syslinux
-	cp /usr/share/syslinux/{*.c32,memdisk} ${BOOT_MOUNT_DIR}/syslinux
+
+	cp syslinux/bios/memdisk/memdisk ${BOOT_MOUNT_DIR}/syslinux
+	find syslinux/bios/com32 -type f -name "*.c32" -exec cp '{}' ${BOOT_MOUNT_DIR}/syslinux \;
 
 	boot_partition_hash > ${BOOT_MOUNT_DIR}/${VERSION_FILE}
 }
@@ -193,6 +210,8 @@ if [[ "$1" =~ /dev  ]]; then
 	export BOOT_PART # May be needed in the recursive calls
 
 	check_good_block_device
+
+	check_syslinux
 
 	setup_boot
 
