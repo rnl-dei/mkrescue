@@ -6,7 +6,7 @@ KBD="pt"
 function run() {
 
 	# Copy standard files
-	grub-install ${BOOT_PART} --no-bootsector \
+	grub-install --target=i386-pc ${BOOT_PART} --no-bootsector \
 		--boot-directory ${BOOT_MOUNT_DIR} 2>&1 | quote_output
 
 	# Needed to chainload GRUB from syslinux
